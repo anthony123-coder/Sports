@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Golf Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eaf1ea;--panel:#fff;--ink:#14201a;--mute:#5c6b61;--line:#cfdccf;--green:#17402b;--on-green:#f2f8f2;--flag:#d6402f;--up:#1b7a3d;--down:#c0392b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1812;--panel:#16241b;--ink:#e6efe7;--mute:#92a597;--line:#2a3d30;--green:#2f7a4f;--on-green:#f2f8f2;--up:#5fd28a;--down:#ff8a7a}}
+:root[data-theme="dark"]{--bg:#0e1812;--panel:#16241b;--ink:#e6efe7;--mute:#92a597;--line:#2a3d30;--green:#2f7a4f;--on-green:#f2f8f2;--up:#5fd28a;--down:#ff8a7a}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+header{background:var(--green);color:var(--on-green);border-radius:14px;padding:20px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+h1{margin:0;font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.stats{display:flex;gap:20px;flex-wrap:wrap}
+.stats div{font-size:13px;opacity:.85}
+.stats b{display:block;font-size:20px;opacity:1}
+nav{display:flex;gap:4px;margin:16px 0;border-bottom:2px solid var(--line);overflow-x:auto}
+nav button{background:none;border:0;padding:10px 14px;font:inherit;font-weight:600;color:var(--mute);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
+nav button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--flag)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:560px}
+th,td{padding:8px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:12px;color:var(--mute);font-weight:600}
+td.n{font-variant-numeric:tabular-nums}
+button.btn{background:var(--green);color:var(--on-green);border:0;border-radius:8px;padding:7px 12px;font:inherit;font-weight:600;cursor:pointer}
+button.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.btn.go{background:var(--flag);color:#fff;padding:10px 16px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--flag);outline-offset:2px}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+label{display:flex;flex-direction:column;font-size:13px;color:var(--mute);gap:4px}
+input{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+form .full{grid-column:1/-1}
+.up{color:var(--up);font-weight:600}.down{color:var(--down);font-weight:600}
+.empty{color:var(--mute);padding:20px 0;text-align:center}
+.tag{font-size:11px;border:1px solid var(--line);border-radius:6px;padding:0 5px;color:var(--mute);margin-left:4px}
+.toolbar{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.toolbar p{margin:0;color:var(--mute);font-size:13px}
+ul.log{list-style:none;margin:0;padding:0}
+ul.log li{padding:6px 0;border-bottom:1px solid var(--line)}
+h3{margin:14px 0 6px;font-size:16px}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div><h1>Golf Manager</h1><div style="opacity:.85">Build your roster. No budget limit.</div></div>
+  <div class="stats">
+    <div>Season<b id="sSeason"></b></div>
+    <div>Players<b id="sCount"></b></div>
+    <div>Payroll<b id="sPay"></b></div>
+    <div>Salary cap<b>None</b></div>
+  </div>
+</header>
+<nav role="tablist" id="tabs"></nav>
+<section class="panel" id="view"></section>
+<p style="text-align:right"><button class="btn alt" id="reset">Reset game</button></p>
+</main>
+<script>
+(function(){
+var FN=["Jack","Tiger","Rory","Scottie","Collin","Viktor","Xander","Hideki","Jon","Bryson","Max","Tom","Cam","Sam","Wyndham","Ludvig","Tyrrell","Matt","Patrick","Brooks","Justin","Adam","Sungjae","Joaquin"];
+var LN=["Hale","Brandt","Okafor","Lindqvist","Moreau","Tanaka","Reyes","Calloway","Park","Novak","Fairchild","Barrett","Duarte","Kessler","Ashworth","Mbeki","Ferro","Sutter","Voss","Ikeda"];
+var TABS=[["roster","Roster"],["market","Free agents"],["create","Create player"],["events","Tournaments"],["rank","Rankings"],["stats","Stat leaders"],["senior","Senior tour"],["hof","Hall of Fame"],["retired","Retired"],["log","Season log"]];
+var STARS=[["Scottie Scheffler",30,98,98,0,4],["Rory McIlroy",37,94,94,6,0],["Matt Fitzpatrick",32,91,91,-3,3],["Cameron Young",29,90,92,6,0],["Wyndham Clark",33,89,89,5,-1],["Chris Gotterup",27,88,92,7,-2],["Xander Schauffele",33,88,88,0,3],["Ben Griffin",30,87,88,-1,2],["Sam Burns",30,86,87,-1,0],["Russell Henley",37,86,86,-4,3],["Jon Rahm",32,88,88,3,2],["Tommy Fleetwood",36,85,85,-2,3],["Collin Morikawa",29,86,87,-4,6],["Ludvig Åberg",27,86,92,4,3],["Bryson DeChambeau",33,85,85,9,-2],["Justin Rose",46,80,80,-3,3],["Aaron Rai",31,82,83,-6,5],["Tyrrell Hatton",35,82,82,-1,2],["Jacob Bridgeman",27,82,87,0,1],["Kristoffer Reitan",28,81,85,2,0],["Patrick Reed",36,80,80,-3,2],["Viktor Hovland",29,83,86,2,2],["Robert MacIntyre",30,82,83,2,0],["Justin Thomas",33,83,83,0,3],["Si Woo Kim",31,80,80,-2,1]];
+var LEGENDS=[["Tiger Woods",29,99,99,5,4],["Jack Nicklaus",30,98,98,4,3],["Arnold Palmer",31,94,94,3,0],["Gary Player",30,93,93,-3,3],["Ben Hogan",36,96,96,-1,8],["Seve Ballesteros",28,94,94,3,-2],["Tom Watson",30,94,94,0,2],["Phil Mickelson",34,93,93,2,-4],["Greg Norman",31,93,93,6,2],["Lee Trevino",31,92,92,-4,5]];
+var EVENTS=[["The Masters",[.25,.4,.35]],["PGA Championship",[.4,.35,.25]],["U.S. Open",[.35,.4,.25]],["The Open Championship",[.3,.4,.3]],["THE PLAYERS Championship",[.33,.34,.33]],["Genesis Invitational",[.35,.35,.3]],["Arnold Palmer Invitational",[.4,.3,.3]],["Memorial Tournament",[.3,.4,.3]],["Tour Championship",[.3,.3,.4]],["Scottish Open",[.34,.33,.33]]];
+function mk(a,tag){var o=a[2],d=clamp(o+a[4],30,99),i=clamp(o+a[5],30,99);return{id:S.nid++,name:a[0],age:a[1],drv:d,irn:i,put:clamp(3*o-d-i,30,99),pot:a[3],tag:tag}}
+function hp(p){return Math.round((p.w||0)*4+(p.t10||0)*.5+Math.max(0,Math.max(p.pk||0,ovr(p))-85)*2)}
+var SEN=[["Senior PGA Championship",[.3,.35,.35]],["U.S. Senior Open",[.3,.4,.3]],["The Senior Open",[.35,.35,.3]]];
+function rankList(){return S.roster.concat(S.pool).filter(function(p){return!p.sen}).map(function(p){return[p,ovr(p)+(p.sw||0)*5+(p.s10||0)*1.5]}).sort(function(a,b){return b[1]-a[1]})}
+function runSenior(){
+  var field=S.roster.concat(S.pool).filter(function(p){return p.sen}),mine={},out=[];
+  S.roster.forEach(function(p){mine[p.id]=1});S.lastSen=[];
+  if(!field.length)return out;
+  SEN.forEach(function(e){
+    var r=field.map(function(p){return{p:p,s:e[1][0]*p.drv+e[1][1]*p.irn+e[1][2]*p.put+(Math.random()+Math.random()+Math.random()-1.5)*14}}).sort(function(a,b){return b.s-a.s});
+    var w=r[0].p;w.w=(w.w||0)+1;
+    r.forEach(function(x,k){x.p.ev=(x.p.ev||0)+1;if(k<10)x.p.t10=(x.p.t10||0)+1});
+    S.lastSen.push({n:e[0],w:w.name});
+    out.push("<b>"+e[0]+":</b> "+esc(w.name)+" won"+(mine[w.id]?' <span class=\"up\">(your player)</span>':"")+".");
+  });
+  return out;
+}
+function ord(n){var s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])}
+function runEvents(){
+  var field=S.roster.concat(S.pool).filter(function(p){return!p.sen}),mine={},out=[];
+  S.roster.forEach(function(p){mine[p.id]=1});S.last=[];S.roster.concat(S.pool).forEach(function(p){p.sw=0;p.s10=0;p.sp=0;p.se=0});
+  EVENTS.forEach(function(e){
+    var r=field.map(function(p){return{p:p,s:e[1][0]*p.drv+e[1][1]*p.irn+e[1][2]*p.put+(Math.random()+Math.random()+Math.random()-1.5)*14}}).sort(function(a,b){return b.s-a.s});
+    var w=r[0].p,pos=-1,i;w.w=(w.w||0)+1;w.sw++;r.forEach(function(x,k){var q=x.p;q.se++;q.sp+=k+1;q.ev=(q.ev||0)+1;if(k<10){q.s10++;q.t10=(q.t10||0)+1}});
+    for(i=0;i<r.length;i++)if(mine[r[i].p.id]){pos=i;break}
+    var m=pos<0?"no entrants":esc(r[pos].p.name)+" finished "+ord(pos+1);
+    S.last.push({n:e[0],w:w.name,m:m});
+    out.push("<b>"+e[0]+":</b> "+esc(w.name)+" won"+(mine[w.id]?' <span class="up">(your player)</span>':"")+". Your best: "+m+".");
+  });
+  return out;
+}
+var tab="roster",S,sc="season",cat="w";
+function rnd(a,b){return a+Math.floor(Math.random()*(b-a+1))}
+function clamp(v,a,b){v=Math.round(Number(v));if(isNaN(v))v=a;return Math.max(a,Math.min(b,v))}
+function ovr(p){return Math.round((p.drv+p.irn+p.put)/3)}
+function sal(p){return Math.round(ovr(p)*ovr(p)/40)/10}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function gen(){
+  var age=rnd(19,42),pot=rnd(55,97),base=Math.max(35,pot-rnd(5,30)-(age>30?0:Math.max(0,(28-age)*2)));
+  if(age>=36)base=Math.max(40,pot-rnd(0,15));
+  return{id:S.nid++,name:FN[rnd(0,FN.length-1)]+" "+LN[rnd(0,LN.length-1)],age:age,drv:clamp(base+rnd(-6,6),30,99),irn:clamp(base+rnd(-6,6),30,99),put:clamp(base+rnd(-6,6),30,99),pot:Math.max(pot,base)};
+}
+function fresh(){
+  S={season:1,nid:1,roster:[],pool:[],log:[],last:null,ret:[],hof:[]};
+  var i;for(i=0;i<8;i++)S.roster.push(gen());
+  STARS.forEach(function(a){S.pool.push(mk(a,"Top 25"))});
+  LEGENDS.forEach(function(a){S.pool.push(mk(a,"Legend"))});
+  for(i=0;i<14;i++)S.pool.push(gen());
+  for(i=0;i<6;i++){var q0=gen();q0.age=rnd(50,58);q0.sen=1;S.pool.push(q0)}
+}
+function load(){try{var r=localStorage.getItem("golfmgr2");if(r){S=JSON.parse(r);if(S&&S.roster){S.ret=S.ret||[];S.hof=S.hof||[];return}}}catch(e){}fresh()}
+function save(){try{localStorage.setItem("golfmgr2",JSON.stringify(S))}catch(e){}}
+function stat(v,age,pot,ovrNow){
+  if(age<28){
+    if(v>=pot)return v;
+    var room=Math.max(0,pot-ovrNow);
+    return Math.min(pot,v+rnd(0,2+Math.round(room/6)+(pot>=85?1:0)));
+  }
+  if(age>=45)return Math.max(1,v-rnd(3,6));
+  if(age>=38)return Math.max(1,v-rnd(1,3));
+  return v;
+}
+function advance(){
+  S.prevRank={};rankList().forEach(function(r,i){S.prevRank[r[0].id]=i+1});var ev=runEvents().concat(runSenior()),lines=[];
+  function age(p,track){
+    var before=ovr(p),o=before,a=p.age;p.pk=Math.max(p.pk||0,before);
+    var ea=p.sen?Math.min(a,44):a;p.drv=stat(p.drv,ea,p.pot,o);p.irn=stat(p.irn,ea,p.pot,o);p.put=stat(p.put,ea,p.pot,o);
+    p.age=a+1;
+    var d=ovr(p)-before;
+    if(track&&d!==0)lines.push(esc(p.name)+" (age "+p.age+") "+(d>0?'<span class="up">+':'<span class="down">')+d+" overall</span>");
+  }
+  S.roster.forEach(function(p){age(p,true)});
+  S.pool.forEach(function(p){age(p,false)});
+  S.ret.forEach(function(q){q.age++});var rt=[];S.roster.concat(S.pool).forEach(function(p){if(!p.sen&&p.age>=50){p.sen=1;rt.push(esc(p.name)+' joined the senior tour.')}});
+  function chk(list,mine){for(var i=list.length-1;i>=0;i--){var p=list[i],a=p.age,c=p.sen?(a>=65?1:a>=60?.35:a>=55?.12:.04):0;if(p.sen&&a>=36&&ovr(p)<45)c=Math.max(c,.5);if(Math.random()<c){list.splice(i,1);var pk=Math.max(p.pk||0,ovr(p)),sc2=(p.w||0)*4+(p.t10||0)*.5+Math.max(0,pk-85)*2;p.ry=S.season;p.pk=pk;p.hs=Math.round(sc2);var ind=sc2>=20&&!p.inh;if(ind){p.inh=1;S.hof.push(p)}S.ret.push(p);rt.push(esc(p.name)+' retired at '+a+(mine?' (your player)':'')+(ind?' <span class="up">and was inducted into the Hall of Fame</span>':'')+'.')}}}
+  chk(S.roster,true);chk(S.pool,false);
+  for(var j=S.ret.length-1;j>=0;j--){var q=S.ret[j];if(q.ry<S.season&&q.age<=48&&ovr(q)>=75&&Math.random()<.04){S.ret.splice(j,1);q.cb=(q.cb||0)+1;S.pool.push(q);rt.push(esc(q.name)+' came out of retirement and is a free agent.')}}
+  S.season++;
+  S.log.unshift({season:S.season-1,ev:ev,rt:rt,lines:lines.length?lines:["No rating changes on your roster."]});
+  save();render();
+}
+function row(p,act){
+  return "<tr><td>"+esc(p.name)+(p.tag?' <span class="tag">'+p.tag+'</span>':'')+(p.sen?' <span class="tag">Senior</span>':'')+(p.w?' <span class="tag">'+p.w+(p.w>1?' titles':' title')+'</span>':'')+"</td><td class='n'>"+p.age+"</td><td class='n'>"+p.drv+"</td><td class='n'>"+p.irn+"</td><td class='n'>"+p.put+"</td><td class='n'><b>"+ovr(p)+"</b></td><td class='n'>"+p.pot+"</td><td class='n'>$"+sal(p).toFixed(1)+"M</td><td>"+act+"</td></tr>";
+}
+var HEAD="<tr><th>Name</th><th>Age</th><th>Drive</th><th>Iron</th><th>Putt</th><th>Ovr</th><th>Pot</th><th>Salary</th><th></th></tr>";
+function render(){
+  var pay=S.roster.reduce(function(s,p){return s+sal(p)},0);
+  document.getElementById("sSeason").textContent=S.season;
+  document.getElementById("sCount").textContent=S.roster.length;
+  document.getElementById("sPay").textContent="$"+pay.toFixed(1)+"M";
+  document.getElementById("tabs").innerHTML=TABS.map(function(t){return'<button role="tab" data-t="'+t[0]+'" aria-selected="'+(t[0]===tab)+'">'+t[1]+'</button>'}).join("");
+  var v=document.getElementById("view"),h="";
+  if(tab==="roster"){
+    h='<div class="toolbar"><p>Players under 28 improve each season. Decline starts at 38 and speeds up at 45.</p><button class="btn go" data-a="adv">Advance to season '+(S.season+1)+'</button></div>';
+    h+=S.roster.length?'<div class="scroll"><table>'+HEAD+S.roster.map(function(p){return row(p,'<button class="btn alt" data-a="rel" data-id="'+p.id+'">Release</button>'+(p.age>=45&&!p.sen?' <button class="btn alt" data-a="sen" data-id="'+p.id+'">Senior tour</button>':''))}).join("")+'</table></div>':'<div class="empty">Your roster is empty. Sign players in Free agents.</div>';
+  }else if(tab==="market"){
+    h='<div class="toolbar"><p>Sign anyone. There is no salary cap.</p><button class="btn alt" data-a="more">Add 6 more free agents</button></div>';
+    h+=S.pool.length?'<div class="scroll"><table>'+HEAD+S.pool.map(function(p){return row(p,'<button class="btn" data-a="sign" data-id="'+p.id+'">Sign</button>')}).join("")+'</table></div>':'<div class="empty">No free agents left. Add more above.</div>';
+  }else if(tab==="create"){
+    h='<form id="cf"><label class="full">Name<input name="name" required maxlength="40" placeholder="Player name"></label>'+
+    '<label>Age<input name="age" type="number" min="16" max="60" value="22"></label>'+
+    '<label>Driving<input name="drv" type="number" min="1" max="99" value="60"></label>'+
+    '<label>Irons<input name="irn" type="number" min="1" max="99" value="60"></label>'+
+    '<label>Putting<input name="put" type="number" min="1" max="99" value="60"></label>'+
+    '<label>Potential<input name="pot" type="number" min="1" max="99" value="85"></label>'+
+    '<div class="full"><button class="btn go" type="submit">Create and sign player</button></div></form>';
+  }else if(tab==='rank'){
+    var rl=rankList().slice(0,25),mineIds={};S.roster.forEach(function(p){mineIds[p.id]=1});
+    h='<p style="margin:0 0 10px;color:var(--mute)">Ranking score is overall rating plus 5 per title and 1.5 per top 10 last season. It updates each time you advance a season. Senior tour players are not ranked here.</p><div class="scroll"><table style="min-width:520px"><tr><th>Rank</th><th>Player</th><th>Status</th><th>Age</th><th>Ovr</th><th>Titles</th><th>Move</th></tr>'+rl.map(function(r,i){var p=r[0],pv=S.prevRank&&S.prevRank[p.id],mv='\u2014';if(S.prevRank){if(!pv)mv='New';else if(pv>i+1)mv='<span class="up">\u25b2'+(pv-i-1)+'</span>';else if(pv<i+1)mv='<span class="down">\u25bc'+(i+1-pv)+'</span>'}return'<tr><td class="n">'+(i+1)+'</td><td>'+esc(p.name)+(p.tag?' <span class="tag">'+p.tag+'</span>':'')+'</td><td>'+(mineIds[p.id]?'Yours':'Free agent')+'</td><td class="n">'+p.age+'</td><td class="n">'+ovr(p)+'</td><td class="n">'+(p.sw||0)+'</td><td class="n">'+mv+'</td></tr>'}).join('')+'</table></div>';
+  }else if(tab==='senior'){
+    var sl=S.roster.concat(S.pool).filter(function(p){return p.sen}).sort(function(a,b){return ovr(b)-ovr(a)}),mi={};S.roster.forEach(function(p){mi[p.id]=1});
+    h='<p style="margin:0 0 10px;color:var(--mute)">Golfers join the senior tour automatically at 50. You can move your own players over from 45 on the Roster tab. Seniors decline more slowly, skip the main events, and play three senior majors each season.</p>';
+    h+=S.lastSen&&S.lastSen.length?'<div class="scroll"><table style="min-width:360px"><tr><th>Senior event</th><th>Last winner</th></tr>'+S.lastSen.map(function(l){return'<tr><td>'+l.n+'</td><td>'+esc(l.w)+'</td></tr>'}).join('')+'</table></div>':'';
+    h+='<h3>Senior tour players</h3>'+(sl.length?'<div class="scroll"><table style="min-width:420px"><tr><th>Player</th><th>Status</th><th>Age</th><th>Ovr</th><th>Titles</th></tr>'+sl.map(function(p){return'<tr><td>'+esc(p.name)+'</td><td>'+(mi[p.id]?'Yours':'Free agent')+'</td><td class="n">'+p.age+'</td><td class="n">'+ovr(p)+'</td><td class="n">'+(p.w||0)+'</td></tr>'}).join('')+'</table></div>':'<div class="empty">Nobody is on the senior tour yet.</div>');
+  }else if(tab==='retired'){
+    h='<p style="margin:0 0 10px;color:var(--mute)">Bring a retired golfer back and they join free agency with the rating they retired with. Players 50 and older return to the senior tour. Each year a few good retirees under 49 come back on their own.</p>';
+    h+=S.ret.length?'<div class="scroll"><table style="min-width:560px"><tr><th>Name</th><th>Retired</th><th>Age</th><th>Ovr</th><th>Titles</th><th>Hall of Fame</th><th></th></tr>'+S.ret.slice().reverse().slice(0,60).map(function(p){return'<tr><td>'+esc(p.name)+'</td><td class="n">Season '+p.ry+'</td><td class="n">'+p.age+'</td><td class="n">'+ovr(p)+'</td><td class="n">'+(p.w||0)+'</td><td>'+(p.inh?'Yes':'No')+'</td><td><button class="btn" data-a="back" data-id="'+p.id+'">Come out of retirement</button></td></tr>'}).join('')+'</table></div>':'<div class="empty">Nobody has retired yet.</div>';
+  }else if(tab==='stats'){
+    var sea=sc==='season',cats=sea?[['w','Titles'],['t10','Top 10s'],['avg','Avg finish']]:[['w','Titles'],['t10','Top 10s'],['ev','Events'],['pk','Peak overall'],['hp','HOF points']],lbl='';
+    if(!cats.some(function(x){return x[0]===cat}))cat='w';
+    cats.forEach(function(x){if(x[0]===cat)lbl=x[1]});
+    var all=S.roster.map(function(p){return[p,'Yours']}).concat(S.pool.map(function(p){return[p,'Free agent']}));
+    if(!sea)all=all.concat(S.ret.map(function(p){return[p,p.hs>=20?'Hall of Fame':'Retired']}));
+    var rows=all.map(function(a){var p=a[0],v=cat==='avg'?(p.se?p.sp/p.se:null):cat==='w'?(sea?p.sw:p.w)||0:cat==='t10'?(sea?p.s10:p.t10)||0:cat==='ev'?p.ev||0:cat==='hp'?hp(p):Math.max(p.pk||0,ovr(p));return[p,a[1],v]}).filter(function(r){return r[2]!==null&&(cat==='avg'||cat==='pk'||r[2]>0)});
+    rows.sort(function(a,b){return cat==='avg'?a[2]-b[2]:b[2]-a[2]});
+    h='<div class="toolbar"><div>'+[['season','Last season'],['career','Career']].map(function(x){return'<button class="btn'+(sc===x[0]?'':' alt')+'" data-a="scope" data-v="'+x[0]+'">'+x[1]+'</button> '}).join('')+'</div><div>'+cats.map(function(x){return'<button class="btn'+(cat===x[0]?'':' alt')+'" data-a="cat" data-v="'+x[0]+'">'+x[1]+'</button> '}).join('')+'</div></div>';
+    h+=rows.length?'<div class="scroll"><table style="min-width:420px"><tr><th>Player</th><th>Status</th><th>Age</th><th>'+lbl+'</th></tr>'+rows.slice(0,15).map(function(r){return'<tr><td>'+esc(r[0].name)+'</td><td>'+r[1]+'</td><td class="n">'+r[0].age+'</td><td class="n"><b>'+(cat==='avg'?r[2].toFixed(1):r[2])+'</b></td></tr>'}).join('')+'</table></div>':'<div class="empty">'+(sea?'Advance a season to see season stats.':'No career stats yet.')+'</div>';
+  }else if(tab==='hof'){
+    h='<p style="margin:0 0 10px;color:var(--mute)">Retired players enter the Hall of Fame with a score of 20 or more: 4 points per title, half a point per top 10, and 2 points for each point of peak overall above 85. '+S.ret.length+' players have retired so far.</p>';
+    h+=S.hof.length?'<div class="scroll"><table style="min-width:480px"><tr><th>Name</th><th>Class</th><th>Titles</th><th>Top 10s</th><th>Peak</th><th>Score</th></tr>'+S.hof.map(function(p){return'<tr><td>'+esc(p.name)+'</td><td class="n">Season '+p.ry+'</td><td class="n">'+(p.w||0)+'</td><td class="n">'+(p.t10||0)+'</td><td class="n">'+p.pk+'</td><td class="n"><b>'+p.hs+'</b></td></tr>'}).join('')+'</table></div>':'<div class="empty">No inductees yet. Players are inducted when they retire.</div>';
+    var lead=S.roster.map(function(p){return[p,'Yours']}).concat(S.pool.map(function(p){return[p,'Free agent']}),S.ret.map(function(p){return[p,p.hs>=20?'Hall of Fame':'Retired']})).map(function(a){return[a[0],a[1],hp(a[0])]}).filter(function(r){return r[2]>0}).sort(function(a,b){return b[2]-a[2]}).slice(0,15);
+    h+='<h3>Hall of Fame points leaders</h3>'+(lead.length?'<div class="scroll"><table style="min-width:480px"><tr><th>Player</th><th>Status</th><th>Titles</th><th>Top 10s</th><th>Peak</th><th>Points</th></tr>'+lead.map(function(r){var p=r[0];return'<tr><td>'+esc(p.name)+'</td><td>'+r[1]+'</td><td class="n">'+(p.w||0)+'</td><td class="n">'+(p.t10||0)+'</td><td class="n">'+Math.max(p.pk||0,ovr(p))+'</td><td class="n"><b>'+r[2]+'</b></td></tr>'}).join('')+'</table></div>':'<div class="empty">No points yet.</div>');
+  }else if(tab==="events"){
+    h='<div class="toolbar"><p>All 10 events are played when you advance the season. Every golfer on your roster and in free agency is in the field.</p><button class="btn go" data-a="adv">Play season '+S.season+'</button></div><div class="scroll"><table style="min-width:420px"><tr><th>Tournament</th><th>Last winner</th><th>Your best finish</th></tr>'+EVENTS.map(function(e,i){var l=S.last&&S.last[i];return"<tr><td>"+e[0]+"</td><td>"+(l?esc(l.w):"Not played yet")+"</td><td>"+(l?l.m:"")+"</td></tr>"}).join("")+"</table></div>";
+  }else{
+    h=S.log.length?S.log.map(function(e){return"<h3>Season "+e.season+" results</h3><ul class='log'>"+(e.ev||[]).map(function(l){return"<li>"+l+"</li>"}).join("")+"</ul><h3>Retirements and moves</h3><ul class='log'>"+((e.rt&&e.rt.length)?e.rt:["No retirements."]).map(function(l){return"<li>"+l+"</li>"}).join("")+"</ul><h3>Off-season changes</h3><ul class='log'>"+e.lines.map(function(l){return"<li>"+l+"</li>"}).join("")+"</ul>"}).join(""):'<div class="empty">Advance a season to see who improved or declined.</div>';
+  }
+  v.innerHTML=h;
+}
+function find(list,id){for(var i=0;i<list.length;i++)if(list[i].id===id)return i;return -1}
+document.addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  if(b.dataset.t){tab=b.dataset.t;render();return}
+  if(b.id==="reset"){if(b.dataset.armed){fresh();tab="roster";sc="season";cat="w";save();render();b.textContent="Reset game";delete b.dataset.armed}else{b.dataset.armed="1";b.textContent="Click again to erase everything";setTimeout(function(){b.textContent="Reset game";delete b.dataset.armed},4000)}return}
+  var a=b.dataset.a,id=Number(b.dataset.id),i;
+  if(a==="scope"){sc=b.dataset.v;render()}
+  else if(a==="cat"){cat=b.dataset.v;render()}
+  else if(a==="adv")advance();
+  else if(a==="sign"){i=find(S.pool,id);if(i>=0){S.roster.push(S.pool.splice(i,1)[0]);save();render()}}
+  else if(a==="rel"){i=find(S.roster,id);if(i>=0){S.pool.push(S.roster.splice(i,1)[0]);save();render()}}
+  else if(a==="sen"){i=find(S.roster,id);if(i>=0){S.roster[i].sen=1;save();render()}}
+  else if(a==="back"){i=find(S.ret,id);if(i>=0){var q=S.ret.splice(i,1)[0];q.sen=q.age>=50?1:0;q.cb=(q.cb||0)+1;S.pool.push(q);save();render()}}
+  else if(a==="more"){for(var k=0;k<6;k++)S.pool.push(gen());save();render()}
+});
+document.addEventListener("submit",function(e){
+  if(e.target.id!=="cf")return;e.preventDefault();
+  var f=e.target.elements,n=f.name.value.trim();if(!n)return;
+  S.roster.push({id:S.nid++,name:n,age:clamp(f.age.value,16,60),drv:clamp(f.drv.value,1,99),irn:clamp(f.irn.value,1,99),put:clamp(f.put.value,1,99),pot:clamp(f.pot.value,1,99)});
+  save();tab="roster";render();
+});
+load();render();
+})();
+</script>
+</body>
+</html>
